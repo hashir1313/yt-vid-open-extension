@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Open All YouTube Videos",
+  "version": "1.0",
+  "description": "Opens all YouTube video links from Google search results in new tabs.",
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["*://www.google.com/search*", "*://google.com/search*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ]
+}
