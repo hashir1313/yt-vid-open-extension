@@ -6,9 +6,8 @@
   "permissions": ["activeTab"],
   "content_scripts": [
     {
-      "matches": ["*://www.google.com/search*", "*://google.com/search*"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
+      "matches": ["*://www.google.com/*", "*://google.com/*"],
+      "js": ["content.js"]
     }
   ]
 }
