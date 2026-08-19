@@ -180,10 +180,12 @@ function createModal(linksGroup) {
   let currentSelectedLinks = [];
 
   function updateSelection() {
-    currentSelectedLinks = [];
-    if (cbVideos.checked) currentSelectedLinks.push(...videos);
-    if (cbChannels.checked) currentSelectedLinks.push(...channels);
-    if (cbPlaylists.checked) currentSelectedLinks.push(...playlists);
+    const rawSelected = [];
+    if (cbVideos.checked) rawSelected.push(...videos);
+    if (cbChannels.checked) rawSelected.push(...channels);
+    if (cbPlaylists.checked) rawSelected.push(...playlists);
+
+    currentSelectedLinks = [...new Set(rawSelected)];
 
     const len = currentSelectedLinks.length;
     label.textContent = `How many to open? (Selected: ${len})`;
