@@ -21,29 +21,33 @@ function processYouTubeUrl(rawUrl) {
     // 1. YouTube Channel Link Patterns
     const handleMatch = pathname.match(/^\/(@[^\/]+)/);
     if (handleMatch) {
-      return { type: 'channel', url: `https://www.youtube.com/${handleMatch[1]}/videos` };
+      const handle = handleMatch[1].toLowerCase();
+      return { type: 'channel', id: handle, url: `https://www.youtube.com/${handleMatch[1]}/videos` };
     }
 
     const cMatch = pathname.match(/^\/(c\/[^\/]+)/);
     if (cMatch) {
-      return { type: 'channel', url: `https://www.youtube.com/${cMatch[1]}/videos` };
+      const cPath = cMatch[1].toLowerCase();
+      return { type: 'channel', id: cPath, url: `https://www.youtube.com/${cMatch[1]}/videos` };
     }
 
     const channelMatch = pathname.match(/^\/(channel\/[^\/]+)/);
     if (channelMatch) {
-      return { type: 'channel', url: `https://www.youtube.com/${channelMatch[1]}/videos` };
+      const channelPath = channelMatch[1].toLowerCase();
+      return { type: 'channel', id: channelPath, url: `https://www.youtube.com/${channelMatch[1]}/videos` };
     }
 
     const userMatch = pathname.match(/^\/(user\/[^\/]+)/);
     if (userMatch) {
-      return { type: 'channel', url: `https://www.youtube.com/${userMatch[1]}/videos` };
+      const userPath = userMatch[1].toLowerCase();
+      return { type: 'channel', id: userPath, url: `https://www.youtube.com/${userMatch[1]}/videos` };
     }
 
     // 2. YouTube Playlist Link Patterns
     if (pathname === '/playlist') {
       const list = url.searchParams.get('list');
       if (list) {
-        return { type: 'playlist', url: `https://www.youtube.com/playlist?list=${list}` };
+        return { type: 'playlist', id: list, url: `https://www.youtube.com/playlist?list=${list}` };
       }
     }
 
@@ -51,20 +55,21 @@ function processYouTubeUrl(rawUrl) {
     if (pathname === '/watch') {
       const v = url.searchParams.get('v');
       if (v) {
-        return { type: 'video', url: `https://www.youtube.com/watch?v=${v}` };
+        return { type: 'video', id: v, url: `https://www.youtube.com/watch?v=${v}` };
       }
     }
 
     if (host.includes('youtu.be')) {
       const videoId = pathname.slice(1).split('/')[0];
       if (videoId) {
-        return { type: 'video', url: `https://youtu.be/${videoId}` };
+        return { type: 'video', id: videoId, url: `https://www.youtube.com/watch?v=${videoId}` };
       }
     }
 
     const shortsMatch = pathname.match(/^\/shorts\/([^\/]+)/);
     if (shortsMatch) {
-      return { type: 'video', url: `https://www.youtube.com/shorts/${shortsMatch[1]}` };
+      const videoId = shortsMatch[1];
+      return { type: 'video', id: videoId, url: `https://www.youtube.com/watch?v=${videoId}` };
     }
 
     return null;
@@ -75,23 +80,23 @@ function processYouTubeUrl(rawUrl) {
 
 function getYouTubeLinks() {
   const links = document.querySelectorAll('a[href]');
-  const videosSet = new Set();
-  const channelsSet = new Set();
-  const playlistsSet = new Set();
+  const videosMap = new Map();
+  const channelsMap = new Map();
+  const playlistsMap = new Map();
 
   links.forEach(link => {
     const res = processYouTubeUrl(link.href);
     if (res) {
-      if (res.type === 'video') videosSet.add(res.url);
-      else if (res.type === 'channel') channelsSet.add(res.url);
-      else if (res.type === 'playlist') playlistsSet.add(res.url);
+      if (res.type === 'video') videosMap.set(res.id, res.url);
+      else if (res.type === 'channel') channelsMap.set(res.id, res.url);
+      else if (res.type === 'playlist') playlistsMap.set(res.id, res.url);
     }
   });
 
   return {
-    videos: [...videosSet],
-    channels: [...channelsSet],
-    playlists: [...playlistsSet]
+    videos: Array.from(videosMap.values()),
+    channels: Array.from(channelsMap.values()),
+    playlists: Array.from(playlistsMap.values())
   };
 }
 

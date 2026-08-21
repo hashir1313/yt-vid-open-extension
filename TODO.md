@@ -2,5 +2,7 @@
 
 - [x] Create README.md documentation and GitHub description
 - [x] Create MIT LICENSE file
-- [ ] *(Awaiting user instructions for changes and issues...)*
+- [x] Fix duplicate YouTube video opening by canonicalizing Video IDs (`content.js`)
+- [ ] *(Awaiting user instructions for next changes and issues...)*
+
 
