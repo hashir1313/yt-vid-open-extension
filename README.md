@@ -8,12 +8,13 @@ A lightweight, powerful Google Chrome Extension (Manifest V3) that automatically
 
 - **Automated YouTube Link Discovery**: Scans Google Search result pages for all YouTube links, including standard watch links, `youtu.be` short links, YouTube Shorts, channel handles (`/@handle`), legacy channel URLs, and playlists.
 - **Google Search Redirect Unpacking**: Unpacks internal Google redirect URLs (`google.com/url?q=...`) to extract clean, direct YouTube links.
-- **Smart Link Categorization**: Categorizes discovered links into three groups:
+- **Smart Link Categorization**: Categorizes discovered links into four distinct groups:
   - 🎬 **Videos** (Watch links, Shorts, Youtu.be)
   - 👤 **Channels** (Channel pages, Handles, User profiles)
   - 📑 **Playlists** (YouTube Playlists)
+  - 🌐 **Other Links** (General search result links on external sites)
 - **Interactive UI Modal**:
-  - Filter by link type using toggle checkboxes.
+  - Filter by link type using individual toggle checkboxes.
   - Choose exact number of links to batch open.
   - Open selected links cleanly in separate tabs with a single click.
 - **Non-Intrusive Floating Button**: Appears neatly at the bottom-right corner of Google Search results pages.

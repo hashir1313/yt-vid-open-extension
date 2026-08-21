@@ -78,25 +78,69 @@ function processYouTubeUrl(rawUrl) {
   }
 }
 
-function getYouTubeLinks() {
+function processOtherUrl(rawUrl) {
+  try {
+    let urlStr = rawUrl;
+    if (urlStr.includes('google.com/url')) {
+      const parsed = new URL(urlStr);
+      const target = parsed.searchParams.get('q') || parsed.searchParams.get('url');
+      if (target) {
+        urlStr = target;
+      }
+    }
+
+    if (!urlStr.startsWith('http://') && !urlStr.startsWith('https://')) {
+      return null;
+    }
+
+    const url = new URL(urlStr);
+    const host = url.hostname.toLowerCase();
+
+    // Skip YouTube links (handled separately)
+    if (host.includes('youtube.com') || host.includes('youtu.be')) {
+      return null;
+    }
+
+    // Skip Google search domain & utility links
+    const isGoogleDomain = /(^|\.)google\.[a-z.]+$/.test(host) ||
+                           host.includes('googleusercontent.com') ||
+                           host.includes('gstatic.com');
+    if (isGoogleDomain) {
+      return null;
+    }
+
+    return url.href;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getAllLinks() {
   const links = document.querySelectorAll('a[href]');
   const videosMap = new Map();
   const channelsMap = new Map();
   const playlistsMap = new Map();
+  const othersSet = new Set();
 
   links.forEach(link => {
-    const res = processYouTubeUrl(link.href);
-    if (res) {
-      if (res.type === 'video') videosMap.set(res.id, res.url);
-      else if (res.type === 'channel') channelsMap.set(res.id, res.url);
-      else if (res.type === 'playlist') playlistsMap.set(res.id, res.url);
+    const ytRes = processYouTubeUrl(link.href);
+    if (ytRes) {
+      if (ytRes.type === 'video') videosMap.set(ytRes.id, ytRes.url);
+      else if (ytRes.type === 'channel') channelsMap.set(ytRes.id, ytRes.url);
+      else if (ytRes.type === 'playlist') playlistsMap.set(ytRes.id, ytRes.url);
+    } else {
+      const otherUrl = processOtherUrl(link.href);
+      if (otherUrl) {
+        othersSet.add(otherUrl);
+      }
     }
   });
 
   return {
     videos: Array.from(videosMap.values()),
     channels: Array.from(channelsMap.values()),
-    playlists: Array.from(playlistsMap.values())
+    playlists: Array.from(playlistsMap.values()),
+    others: Array.from(othersSet)
   };
 }
 
@@ -111,7 +155,8 @@ function createModal(linksGroup) {
   const videos = linksGroup.videos || [];
   const channels = linksGroup.channels || [];
   const playlists = linksGroup.playlists || [];
-  const totalFound = videos.length + channels.length + playlists.length;
+  const others = linksGroup.others || [];
+  const totalFound = videos.length + channels.length + playlists.length + others.length;
 
   const overlay = document.createElement('div');
   overlay.id = 'yt-modal-overlay';
@@ -130,7 +175,7 @@ function createModal(linksGroup) {
   modal.addEventListener('click', (e) => e.stopPropagation());
 
   const title = document.createElement('h3');
-  title.textContent = `${totalFound} YouTube link(s) found`;
+  title.textContent = `${totalFound} link(s) found`;
   title.style.cssText = 'margin:0 0 16px 0;font-size:18px;color:#333;';
 
   const checkboxContainer = document.createElement('div');
@@ -158,10 +203,12 @@ function createModal(linksGroup) {
   const { wrapper: vWrap, cb: cbVideos } = createCheckbox('yt-cb-videos', 'Open Videos', videos.length);
   const { wrapper: cWrap, cb: cbChannels } = createCheckbox('yt-cb-channels', 'Open Channels', channels.length);
   const { wrapper: pWrap, cb: cbPlaylists } = createCheckbox('yt-cb-playlists', 'Open Playlists', playlists.length);
+  const { wrapper: oWrap, cb: cbOthers } = createCheckbox('yt-cb-others', 'Open Other Links', others.length);
 
   checkboxContainer.appendChild(vWrap);
   checkboxContainer.appendChild(cWrap);
   checkboxContainer.appendChild(pWrap);
+  checkboxContainer.appendChild(oWrap);
 
   const label = document.createElement('label');
   label.style.cssText = 'font-size:14px;color:#555;display:block;margin-bottom:6px;';
@@ -189,6 +236,7 @@ function createModal(linksGroup) {
     if (cbVideos.checked) rawSelected.push(...videos);
     if (cbChannels.checked) rawSelected.push(...channels);
     if (cbPlaylists.checked) rawSelected.push(...playlists);
+    if (cbOthers.checked) rawSelected.push(...others);
 
     currentSelectedLinks = [...new Set(rawSelected)];
 
@@ -213,6 +261,7 @@ function createModal(linksGroup) {
   cbVideos.addEventListener('change', updateSelection);
   cbChannels.addEventListener('change', updateSelection);
   cbPlaylists.addEventListener('change', updateSelection);
+  cbOthers.addEventListener('change', updateSelection);
 
   updateSelection();
 
@@ -252,18 +301,18 @@ function createButton() {
   wrapper.style.cssText = 'position:fixed !important;bottom:30px !important;right:30px !important;z-index:2147483647 !important;pointer-events:auto !important;';
 
   const btn = document.createElement('button');
-  btn.textContent = 'Open YouTube Links';
+  btn.textContent = 'Open Links';
   btn.style.cssText = 'padding:14px 24px;background-color:#ff0000;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);pointer-events:auto;';
 
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopImmediatePropagation();
     e.stopPropagation();
-    const linksGroup = getYouTubeLinks();
-    const totalFound = (linksGroup.videos?.length || 0) + (linksGroup.channels?.length || 0) + (linksGroup.playlists?.length || 0);
+    const linksGroup = getAllLinks();
+    const totalFound = (linksGroup.videos?.length || 0) + (linksGroup.channels?.length || 0) + (linksGroup.playlists?.length || 0) + (linksGroup.others?.length || 0);
     if (totalFound === 0) {
       btn.textContent = 'No links found';
-      setTimeout(() => { btn.textContent = 'Open YouTube Links'; }, 2000);
+      setTimeout(() => { btn.textContent = 'Open Links'; }, 2000);
       return;
     }
     createModal(linksGroup);
