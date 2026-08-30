@@ -1,14 +1,16 @@
-# Open All YouTube Videos - Chrome Extension
+# YouTube Utilities & Link Opener - Chrome Extension
 
-A lightweight, powerful Google Chrome Extension (Manifest V3) that automatically extracts, categorizes, and batch-opens YouTube video, channel, and playlist links directly from Google Search result pages into new browser tabs.
+A lightweight, powerful Google Chrome Extension (Manifest V3) that extracts and batch-opens YouTube links from Google Search results, and features a toolbar Extension Popup to extract and open channel `/videos` pages from all open YouTube video tabs in your current window.
 
 ---
 
 ## 🚀 Features
 
+- **Toolbar Extension Popup UI**: Clean, dark-mode extension popup accessible directly from your browser toolbar.
+- **Open Channels Feature**: Scans open YouTube video tabs (`/watch?v=...` and `/shorts/`) in the current window, extracts each creator's channel link, normalizes it to `/@Handle/videos`, and batch-opens them in new tabs.
 - **Automated YouTube Link Discovery**: Scans Google Search result pages for all YouTube links, including standard watch links, `youtu.be` short links, YouTube Shorts, channel handles (`/@handle`), legacy channel URLs, and playlists.
 - **Google Search Redirect Unpacking**: Unpacks internal Google redirect URLs (`google.com/url?q=...`) to extract clean, direct YouTube links.
-- **Smart Link Categorization**: Categorizes discovered links into four distinct groups:
+- **Smart Link Categorization**: Categorizes search result links into four distinct groups:
   - 🎬 **Videos** (Watch links, Shorts, Youtu.be)
   - 👤 **Channels** (Channel pages, Handles, User profiles)
   - 📑 **Playlists** (YouTube Playlists)
@@ -17,7 +19,6 @@ A lightweight, powerful Google Chrome Extension (Manifest V3) that automatically
   - Filter by link type using individual toggle checkboxes.
   - Choose exact number of links to batch open.
   - Open selected links cleanly in separate tabs with a single click.
-- **Non-Intrusive Floating Button**: Appears neatly at the bottom-right corner of Google Search results pages.
 
 ---
 
@@ -36,10 +37,17 @@ A lightweight, powerful Google Chrome Extension (Manifest V3) that automatically
 
 ## 📖 How to Use
 
-1. Perform any search on **Google** that includes YouTube results (e.g., search `"Antigravity AI tutorials"`).
-2. Look for the red floating button **"Open YouTube Links"** in the bottom-right corner of the page.
+### 1. Extension Popup ("Open Channels")
+1. Open YouTube video tabs in your Chrome browser window.
+2. Click the **YouTube Utilities** extension icon in your Chrome toolbar.
+3. Click the **"Open Channels"** button.
+4. The extension will automatically extract each video's creator channel and open their `/@Handle/videos` page in background tabs.
+
+### 2. Google Search Link Opener
+1. Perform any search on **Google** that includes YouTube results.
+2. Look for the red floating button **"Open Links"** in the bottom-right corner of the page.
 3. Click the button to launch the selection modal.
-4. Select the link types you wish to open (Videos, Channels, Playlists) and specify how many tabs to open.
+4. Select link types (Videos, Channels, Playlists, Other) and specify tab count.
 5. Click **"Open Links"**.
 
 ---
@@ -48,8 +56,11 @@ A lightweight, powerful Google Chrome Extension (Manifest V3) that automatically
 
 ```text
 ├── manifest.json   # Extension manifest (Manifest V3 definition & permissions)
-├── content.js      # Content script for parsing YouTube links and rendering UI
-└── styles.css      # Custom extension styling stylesheet
+├── popup.html      # Toolbar action popup interface HTML
+├── popup.css       # Dark theme styling for popup UI
+├── popup.js        # Controller script for tab querying & channel extraction
+├── content.js      # Content script for parsing YouTube links on Google Search
+└── styles.css      # Styling for Google Search floating action button
 ```
 
 ---
@@ -57,3 +68,4 @@ A lightweight, powerful Google Chrome Extension (Manifest V3) that automatically
 ## 📜 License
 
 MIT License. Feel free to modify and adapt for your own workflows!
+
