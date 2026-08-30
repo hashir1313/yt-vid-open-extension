@@ -74,7 +74,12 @@ Includes a modern toolbar **Extension Popup UI** with zero-delay instant loading
 ├── popup.css       # Dark theme styling for popup UI
 ├── popup.js        # Controller script for tab querying & channel extraction
 ├── content.js      # Content script for parsing YouTube links on Google Search
-└── styles.css      # Styling for Google Search floating action button
+├── styles.css      # Styling for Google Search floating action button
+├── icon16.png      # 16x16 PNG extension icon
+├── icon32.png      # 32x32 PNG extension icon
+├── icon48.png      # 48x48 PNG extension icon
+├── icon128.png     # 128x128 PNG extension icon
+└── ico.svg         # SVG vector source icon
 ```
 
 ---
