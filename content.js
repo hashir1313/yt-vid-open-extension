@@ -331,3 +331,15 @@ const params = new URLSearchParams(window.location.search);
 if (!params.has('start') || params.get('start') === '0') {
   createButton();
 }
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'trigger_open_links') {
+    const linksGroup = getAllLinks();
+    const totalFound = (linksGroup.videos?.length || 0) + (linksGroup.channels?.length || 0) + (linksGroup.playlists?.length || 0) + (linksGroup.others?.length || 0);
+    if (totalFound > 0) {
+      createModal(linksGroup);
+    }
+    sendResponse({ success: true, count: totalFound });
+  }
+});
+

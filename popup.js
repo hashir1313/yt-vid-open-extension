@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnOpenChannels = document.getElementById('btn-open-channels');
   const btnText = document.getElementById('btn-text');
   const tabCountBadge = document.getElementById('tab-count-badge');
+  const btnOpenSearchLinks = document.getElementById('btn-open-search-links');
+  const searchBtnText = document.getElementById('search-btn-text');
+  const searchTabBadge = document.getElementById('search-tab-badge');
   const statusContainer = document.getElementById('status-container');
   const statusIcon = document.getElementById('status-icon');
   const statusMessage = document.getElementById('status-message');
@@ -28,6 +31,24 @@ document.addEventListener('DOMContentLoaded', () => {
       return url.pathname === '/watch' || url.pathname.startsWith('/shorts/') || host.includes('youtu.be');
     } catch (e) {
       return false;
+    }
+  }
+
+  async function checkActiveTab() {
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (activeTab && activeTab.url) {
+        const isGoogle = activeTab.url.includes('google.com');
+        if (isGoogle) {
+          searchTabBadge.textContent = 'Google Search';
+          searchTabBadge.style.color = '#81c784';
+        } else {
+          searchTabBadge.textContent = 'Active Page';
+          searchTabBadge.style.color = '#aaa';
+        }
+      }
+    } catch (e) {
+      console.error('Error checking active tab:', e);
     }
   }
 
@@ -132,7 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnText.textContent = 'Extracting...';
 
     try {
-      // Execute extraction across all detected video tabs concurrently via Promise.all
       const resultsArray = await Promise.all(
         cachedVideoTabs.map(tab =>
           chrome.scripting.executeScript({
@@ -160,7 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (uniqueChannelUrls.length === 0) {
         showStatus('error', `Found ${cachedVideoTabs.length} video tab(s), but couldn't extract channel links. Make sure video pages are fully loaded.`, '❌');
       } else {
-        // Open each unique channel in a new background tab
         await Promise.all(
           uniqueChannelUrls.map(channelUrl =>
             chrome.tabs.create({ url: channelUrl, active: false })
@@ -182,6 +201,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Start initial tab scanning immediately without blocking render
+  btnOpenSearchLinks.addEventListener('click', async () => {
+    hideStatus();
+    showStatus('info', 'Triggering link extraction on active page...', '⏳');
+    btnOpenSearchLinks.disabled = true;
+    searchBtnText.textContent = 'Extracting...';
+
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!activeTab || !activeTab.id) {
+        showStatus('error', 'No active tab found in current window.', '⚠️');
+        btnOpenSearchLinks.disabled = false;
+        searchBtnText.textContent = 'Open Links';
+        return;
+      }
+
+      chrome.tabs.sendMessage(activeTab.id, { action: 'trigger_open_links' }, async (response) => {
+        if (chrome.runtime.lastError || !response) {
+          try {
+            const results = await chrome.scripting.executeScript({
+              target: { tabId: activeTab.id },
+              func: () => {
+                if (typeof getAllLinks === 'function' && typeof createModal === 'function') {
+                  const linksGroup = getAllLinks();
+                  const totalFound = (linksGroup.videos?.length || 0) + (linksGroup.channels?.length || 0) + (linksGroup.playlists?.length || 0) + (linksGroup.others?.length || 0);
+                  if (totalFound > 0) createModal(linksGroup);
+                  return totalFound;
+                }
+                return 0;
+              }
+            });
+
+            const count = results && results[0] ? results[0].result : 0;
+            if (count > 0) {
+              showStatus('success', `Found ${count} link(s)! Selection modal opened on tab.`, '✅');
+            } else {
+              showStatus('info', 'Please use this button on a Google Search results page with links.', 'ℹ️');
+            }
+          } catch (execErr) {
+            console.error('Failed to execute script on active tab:', execErr);
+            showStatus('error', 'Cannot extract links on this page. Try on a Google Search page.', '❌');
+          }
+        } else {
+          if (response.count > 0) {
+            showStatus('success', `Found ${response.count} link(s)! Selection modal opened on tab.`, '✅');
+          } else {
+            showStatus('info', 'No YouTube or external links found on active page.', 'ℹ️');
+          }
+        }
+
+        btnOpenSearchLinks.disabled = false;
+        searchBtnText.textContent = 'Open Links';
+      });
+    } catch (err) {
+      console.error('Error opening search links:', err);
+      showStatus('error', 'Failed to open links from active page.', '❌');
+      btnOpenSearchLinks.disabled = false;
+      searchBtnText.textContent = 'Open Links';
+    }
+  });
+
+  // Start initial checks
+  checkActiveTab();
   initializeTabs();
 });

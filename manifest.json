@@ -10,7 +10,9 @@
   ],
   "host_permissions": [
     "*://*.youtube.com/*",
-    "*://youtube.com/*"
+    "*://youtube.com/*",
+    "*://*.google.com/*",
+    "*://google.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

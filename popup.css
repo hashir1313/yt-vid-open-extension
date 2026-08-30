@@ -150,6 +150,22 @@ body {
   transform: none;
 }
 
+.btn-secondary {
+  background-color: #065fd4;
+  color: #ffffff;
+}
+
+.btn-secondary:hover {
+  background-color: #004baf;
+}
+
+.btn-secondary:disabled {
+  background-color: #3a3a3a;
+  color: #777777;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .status-container {
   display: flex;
   align-items: center;
