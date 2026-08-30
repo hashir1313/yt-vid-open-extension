@@ -1,9 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
   const btnOpenChannels = document.getElementById('btn-open-channels');
+  const btnText = document.getElementById('btn-text');
   const tabCountBadge = document.getElementById('tab-count-badge');
   const statusContainer = document.getElementById('status-container');
   const statusIcon = document.getElementById('status-icon');
   const statusMessage = document.getElementById('status-message');
+
+  let cachedVideoTabs = [];
+  let isTabsExtracted = false;
 
   function showStatus(type, message, icon = 'ℹ️') {
     statusContainer.className = `status-container ${type}`;
@@ -27,24 +31,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function getYouTubeVideoTabs() {
+  async function initializeTabs() {
+    tabCountBadge.className = 'badge loading';
+    tabCountBadge.textContent = 'Scanning tabs...';
+    btnOpenChannels.disabled = true;
+
     try {
       const tabs = await chrome.tabs.query({ currentWindow: true });
-      return tabs.filter(tab => isYouTubeVideoUrl(tab.url));
-    } catch (e) {
-      console.error('Error querying tabs:', e);
-      return [];
-    }
-  }
+      cachedVideoTabs = tabs.filter(tab => isYouTubeVideoUrl(tab.url));
+      isTabsExtracted = true;
 
-  async function updateTabCount() {
-    const videoTabs = await getYouTubeVideoTabs();
-    const count = videoTabs.length;
-    tabCountBadge.textContent = `${count} video tab${count === 1 ? '' : 's'}`;
-    if (count === 0) {
-      tabCountBadge.style.color = '#888';
-    } else {
-      tabCountBadge.style.color = '#3ea6ff';
+      const count = cachedVideoTabs.length;
+      tabCountBadge.className = 'badge';
+      tabCountBadge.textContent = `${count} video tab${count === 1 ? '' : 's'}`;
+
+      if (count === 0) {
+        tabCountBadge.style.color = '#888';
+        showStatus('info', 'No open YouTube video tabs in current window.', 'ℹ️');
+        btnOpenChannels.disabled = true;
+      } else {
+        tabCountBadge.style.color = '#3ea6ff';
+        btnOpenChannels.disabled = false;
+      }
+    } catch (e) {
+      console.error('Error initializing tabs:', e);
+      tabCountBadge.className = 'badge';
+      tabCountBadge.textContent = '0 video tabs';
+      showStatus('error', 'Failed to scan browser tabs.', '❌');
     }
   }
 
@@ -55,24 +68,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const pathname = url.pathname.replace(/\/+$/, '');
 
       const handleMatch = pathname.match(/^\/(@[^\/]+)/);
-      if (handleMatch) {
-        return `https://www.youtube.com/${handleMatch[1]}/videos`;
-      }
+      if (handleMatch) return `https://www.youtube.com/${handleMatch[1]}/videos`;
 
       const channelMatch = pathname.match(/^\/(channel\/[^\/]+)/);
-      if (channelMatch) {
-        return `https://www.youtube.com/${channelMatch[1]}/videos`;
-      }
+      if (channelMatch) return `https://www.youtube.com/${channelMatch[1]}/videos`;
 
       const cMatch = pathname.match(/^\/(c\/[^\/]+)/);
-      if (cMatch) {
-        return `https://www.youtube.com/${cMatch[1]}/videos`;
-      }
+      if (cMatch) return `https://www.youtube.com/${cMatch[1]}/videos`;
 
       const userMatch = pathname.match(/^\/(user\/[^\/]+)/);
-      if (userMatch) {
-        return `https://www.youtube.com/${userMatch[1]}/videos`;
-      }
+      if (userMatch) return `https://www.youtube.com/${userMatch[1]}/videos`;
 
       return null;
     } catch (e) {
@@ -119,53 +124,52 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   btnOpenChannels.addEventListener('click', async () => {
+    if (!isTabsExtracted || cachedVideoTabs.length === 0) return;
+
     hideStatus();
-    showStatus('info', 'Scanning video tabs...', '⏳');
+    showStatus('info', 'Extracting channels...', '⏳');
     btnOpenChannels.disabled = true;
+    btnText.textContent = 'Extracting...';
 
     try {
-      const videoTabs = await getYouTubeVideoTabs();
-
-      if (videoTabs.length === 0) {
-        showStatus('error', 'No YouTube video tabs found in current window.', '⚠️');
-        btnOpenChannels.disabled = false;
-        return;
-      }
-
-      const channelUrlsMap = new Set();
-      let scannedTabsCount = 0;
-
-      for (const tab of videoTabs) {
-        try {
-          const results = await chrome.scripting.executeScript({
+      // Execute extraction across all detected video tabs concurrently via Promise.all
+      const resultsArray = await Promise.all(
+        cachedVideoTabs.map(tab =>
+          chrome.scripting.executeScript({
             target: { tabId: tab.id },
             func: extractChannelUrlFromPage
-          });
+          }).catch(err => {
+            console.warn(`Could not execute script on tab ${tab.id}:`, err);
+            return null;
+          })
+        )
+      );
 
-          if (results && results[0] && results[0].result) {
-            const formattedUrl = formatChannelVideosUrl(results[0].result);
-            if (formattedUrl) {
-              channelUrlsMap.add(formattedUrl);
-              scannedTabsCount++;
-            }
+      const channelUrlsMap = new Set();
+      resultsArray.forEach(res => {
+        if (res && res[0] && res[0].result) {
+          const formattedUrl = formatChannelVideosUrl(res[0].result);
+          if (formattedUrl) {
+            channelUrlsMap.add(formattedUrl);
           }
-        } catch (err) {
-          console.warn(`Could not execute script on tab ${tab.id}:`, err);
         }
-      }
+      });
 
       const uniqueChannelUrls = Array.from(channelUrlsMap);
 
       if (uniqueChannelUrls.length === 0) {
-        showStatus('error', `Found ${videoTabs.length} video tab(s), but couldn't extract channel links. Make sure video pages are fully loaded.`, '❌');
+        showStatus('error', `Found ${cachedVideoTabs.length} video tab(s), but couldn't extract channel links. Make sure video pages are fully loaded.`, '❌');
       } else {
-        for (const channelUrl of uniqueChannelUrls) {
-          await chrome.tabs.create({ url: channelUrl, active: false });
-        }
+        // Open each unique channel in a new background tab
+        await Promise.all(
+          uniqueChannelUrls.map(channelUrl =>
+            chrome.tabs.create({ url: channelUrl, active: false })
+          )
+        );
 
         showStatus(
           'success',
-          `Opened ${uniqueChannelUrls.length} unique channel page${uniqueChannelUrls.length === 1 ? '' : 's'} from ${videoTabs.length} video tab${videoTabs.length === 1 ? '' : 's'}!`,
+          `Opened ${uniqueChannelUrls.length} unique channel page${uniqueChannelUrls.length === 1 ? '' : 's'} from ${cachedVideoTabs.length} video tab${cachedVideoTabs.length === 1 ? '' : 's'}!`,
           '✅'
         );
       }
@@ -174,10 +178,10 @@ document.addEventListener('DOMContentLoaded', () => {
       showStatus('error', 'An error occurred while opening channel links.', '❌');
     } finally {
       btnOpenChannels.disabled = false;
-      updateTabCount();
+      btnText.textContent = 'Open Channels';
     }
   });
 
-  // Initial tab count update
-  updateTabCount();
+  // Start initial tab scanning immediately without blocking render
+  initializeTabs();
 });
