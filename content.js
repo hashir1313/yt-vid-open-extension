@@ -204,6 +204,7 @@ function createModal(linksGroup) {
   const { wrapper: cWrap, cb: cbChannels } = createCheckbox('yt-cb-channels', 'Open Channels', channels.length);
   const { wrapper: pWrap, cb: cbPlaylists } = createCheckbox('yt-cb-playlists', 'Open Playlists', playlists.length);
   const { wrapper: oWrap, cb: cbOthers } = createCheckbox('yt-cb-others', 'Open Other Links', others.length);
+  cbOthers.checked = false;
 
   checkboxContainer.appendChild(vWrap);
   checkboxContainer.appendChild(cWrap);
